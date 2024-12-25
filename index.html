@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Song Recommendation</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: url({{ background_images | join('), url(') }}) no-repeat center center / cover;
+            z-index: -1;
+            opacity: 0.2;
+        }
+
+        /* Additional styling for search and dropdown */
+        #searchBar {
+            width: 90%;
+            padding: 10px;
+            font-size: 1.1em;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+
+        #dropdownContainer {
+            position: relative;
+            width: 90%;
+            margin: 0 auto;
+        }
+
+        #songDropdown {
+            position: absolute;
+            top: 40px;
+            width: 100%;
+            max-height: 200px;
+            overflow-y: auto;
+            background-color: #121212;
+            color: #fff;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            display: none;
+            z-index: 1000;
+        }
+
+        .dropdown-item {
+            padding: 10px;
+            cursor: pointer;
+        }
+
+        .dropdown-item:hover {
+            background-color: #1db954;
+        }
+
+        .no-results {
+            padding: 10px;
+            text-align: center;
+            color: #aaa;
+        }
+    </style>
+    <script>
+        let songs = {{ names | tojson }}; // Pre-load the song names from the backend
+
+        function showDropdown() {
+            const dropdown = document.getElementById('songDropdown');
+            dropdown.innerHTML = ''; // Clear existing items
+
+            songs.forEach(song => {
+                const item = document.createElement('div');
+                item.classList.add('dropdown-item');
+                item.textContent = song;
+                item.onclick = () => {
+                    document.getElementById('searchBar').value = song; // Set selected song to the search bar
+                    dropdown.style.display = 'none'; // Hide dropdown
+                };
+                dropdown.appendChild(item);
+            });
+
+            dropdown.style.display = 'block'; // Show dropdown by default
+        }
+
+        function filterSongs() {
+            const input = document.getElementById('searchBar').value.toLowerCase();
+            const dropdown = document.getElementById('songDropdown');
+            dropdown.innerHTML = ''; // Clear existing items
+
+            if (!input) {
+                // If no input, show all songs by default
+                showDropdown();
+                return;
+            }
+
+            const filteredSongs = songs.filter(song => song.toLowerCase().includes(input));
+
+            if (filteredSongs.length === 0) {
+                // Show "No songs available" if no matches
+                dropdown.innerHTML = '<div class="no-results">No songs are available</div>';
+                dropdown.style.display = 'block';
+            } else {
+                // Populate matching songs
+                filteredSongs.forEach(song => {
+                    const item = document.createElement('div');
+                    item.classList.add('dropdown-item');
+                    item.textContent = song;
+                    item.onclick = () => {
+                        document.getElementById('searchBar').value = song; // Set selected song to the search bar
+                        dropdown.style.display = 'none'; // Hide dropdown
+                    };
+                    dropdown.appendChild(item);
+                });
+                dropdown.style.display = 'block';
+            }
+        }
+
+        // Hide dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            const dropdown = document.getElementById('songDropdown');
+            if (!document.getElementById('dropdownContainer').contains(e.target)) {
+                dropdown.style.display = 'none';
+            }
+        });
+    </script>
+</head>
+<body>
+    <h1>Song Recommendation System</h1>
+    <form action="/recom" method="POST">
+        <div id="dropdownContainer">
+            <input 
+                type="text" 
+                id="searchBar" 
+                onfocus="showDropdown()" 
+                oninput="filterSongs()" 
+                placeholder="Type to search for a song..."
+                autocomplete="off"
+                name="names"
+                required
+            >
+            <div id="songDropdown"></div>
+        </div>
+        <br>
+        <button type="submit">Get Recommendations</button>
+    </form>
+
+    {% if songs %}
+        <h2>Recommendations for "{{ selected_song }}":</h2>
+        <div class="recommendation-grid">
+            {% for song, image in songs %}
+                <div class="song-card">
+                    {% if image %}
+                        <img src="{{ image }}" alt="{{ song }} artwork">
+                    {% endif %}
+                    <p>{{ song }}</p>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+</body>
+</html>
